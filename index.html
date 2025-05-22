@@ -71,10 +71,10 @@
         .toolbar {
             background: #f8fafc;
             border-bottom: 1px solid #e2e8f0;
-            padding: 16px 24px;
+            padding: 8px 16px;
             display: flex;
             align-items: center;
-            gap: 24px;
+            gap: 16px;
             flex-wrap: wrap;
         }
 
@@ -304,9 +304,21 @@
 
         #canvas {
             display: block;
-            cursor: crosshair;
+            cursor: none;
             background: white;
             border-radius: 12px;
+        }
+
+        .brush-cursor {
+            position: absolute;
+            border: 2px solid #4f46e5;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1000;
+            transform: translate(-50%, -50%);
+            transition: width 0.1s ease, height 0.1s ease;
+            background: rgba(79, 70, 229, 0.1);
+            display: none;
         }
 
         .resize-handle {
@@ -377,14 +389,23 @@
             cursor: w-resize;
         }
 
+        .header-at-bottom {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
         .status-bar {
             background: #f8fafc;
             border-top: 1px solid #e2e8f0;
-            padding: 12px 24px;
+            padding: 8px 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 14px;
+            font-size: 12px;
             color: #64748b;
         }
 
@@ -518,7 +539,7 @@
                 <div class="control-group">
                     <span class="control-label">Brush Size</span>
                     <div class="slider-container">
-                        <input type="range" class="slider" id="brushSize" min="1" max="50" value="5">
+                        <input type="range" class="slider" id="brushSize" min="5" max="100" value="5" step="5">
                         <span class="size-display" id="sizeDisplay">5px</span>
                     </div>
                 </div>
@@ -552,7 +573,6 @@
         </div>
 
         <div class="status-bar">
-            <span>Ready to create amazing art! 🎨</span>
             <div class="coordinates" id="coordinates">0, 0</div>
         </div>
     </div>
@@ -573,6 +593,11 @@
         let brushSize = 5;
         let startX, startY;
         
+        // Brush cursor element
+        const brushCursor = document.createElement('div');
+        brushCursor.className = 'brush-cursor';
+        document.body.appendChild(brushCursor);
+        
         // Canvas resizing variables
         let isResizing = false;
         let resizeDirection = '';
@@ -589,6 +614,7 @@
                 document.querySelector('.tool-btn.active').classList.remove('active');
                 this.classList.add('active');
                 currentTool = this.dataset.tool;
+                updateCursor();
             });
         });
 
@@ -605,6 +631,7 @@
         brushSizeSlider.addEventListener('input', function() {
             brushSize = this.value;
             sizeDisplay.textContent = this.value + 'px';
+            updateCursorSize();
         });
 
         // Mouse events for canvas drawing
@@ -613,6 +640,8 @@
         canvas.addEventListener('mouseup', stopDrawing);
         canvas.addEventListener('mouseout', stopDrawing);
         canvas.addEventListener('mousemove', updateCoordinates);
+        canvas.addEventListener('mouseenter', showBrushCursor);
+        canvas.addEventListener('mouseleave', hideBrushCursor);
 
         // Resize handle events
         document.querySelectorAll('.resize-handle').forEach(handle => {
@@ -627,6 +656,48 @@
             const x = Math.floor(e.clientX - rect.left);
             const y = Math.floor(e.clientY - rect.top);
             coordsDisplay.textContent = `${x}, ${y}`;
+            updateBrushCursorPosition(e);
+        }
+
+        function updateCursor() {
+            if (currentTool === 'brush' || currentTool === 'eraser') {
+                canvas.style.cursor = 'none';
+            } else {
+                canvas.style.cursor = 'crosshair';
+                hideBrushCursor();
+            }
+        }
+
+        function updateCursorSize() {
+            const size = brushSize;
+            brushCursor.style.width = size + 'px';
+            brushCursor.style.height = size + 'px';
+            
+            if (currentTool === 'eraser') {
+                brushCursor.style.borderColor = '#ef4444';
+                brushCursor.style.background = 'rgba(239, 68, 68, 0.1)';
+            } else {
+                brushCursor.style.borderColor = '#4f46e5';
+                brushCursor.style.background = 'rgba(79, 70, 229, 0.1)';
+            }
+        }
+
+        function showBrushCursor() {
+            if (currentTool === 'brush' || currentTool === 'eraser') {
+                brushCursor.style.display = 'block';
+                updateCursorSize();
+            }
+        }
+
+        function hideBrushCursor() {
+            brushCursor.style.display = 'none';
+        }
+
+        function updateBrushCursorPosition(e) {
+            if (currentTool === 'brush' || currentTool === 'eraser') {
+                brushCursor.style.left = e.clientX + 'px';
+                brushCursor.style.top = e.clientY + 'px';
+            }
         }
 
         function startDrawing(e) {
@@ -917,9 +988,11 @@
             }
         }, { passive: false });
 
-        // Initialize canvas
+        // Initialize canvas and cursor
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+        updateCursor();
+        updateCursorSize();
     </script>
 </body>
 </html>
